@@ -11,21 +11,27 @@ import taxon
 taxa = None
 names = None
 
-def climb_taxonomy(tid):
+def climb_tax(tid):
     global taxa
     global names
-    rtax = {'superkingdom':'__', 'phylum':'__', 'class':'__', 'order':'__', 'family':'__', 'genus':'__', 'species':"__"}
+    # sys.stderr.write("Checking ID for " + tid + "\n")
+    rtax = {'superkingdom':'', 'phylum':'', 'class':'', 'order':'', 'family':'', 'genus':'', 'species':""}
+    # sys.stderr.write("Rank: " + taxa[tid].rank + "\n")
+    # sys.stderr.write("Name: " + names[tid].name + "\n")
+
     rtax[taxa[tid].rank] = names[tid].name
-    while taxa[tid].parent != '1' and i != '1':
+    while taxa[tid].parent != '1' and tid != '1':
         if (taxa[tid].rank in rtax):
             rtax[taxa[tid].rank] = names[tid].name
         tid = taxa[tid].parent
+    return rtax
 
 
 try:
     f = sys.argv[1]
+    outfile = sys.argv[2]
 except:
-    sys.exit(sys.argv[0] + " json format file")
+    sys.exit(sys.argv[0] + " <json format file> <output file>")
 
 with open(f, 'r') as json_file:
     data = json.load(json_file)
@@ -48,24 +54,24 @@ family={}
 genus={}
 species={}
 
-want = {'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'}
+want = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
 
 for t in taxa:
     if taxa[t].rank in want:
         if (taxa[t].rank == 'superkingdom'):
-            kingdom[names[t].name]="k_" + t
+            kingdom[names[t].name]=t
         elif (taxa[t].rank == 'phylum'):
-            phylum[names[t].name]="p_" + t
+            phylum[names[t].name]=t
         elif (taxa[t].rank == 't_class'):
-            t_class[names[t].name]="c_" + t
+            t_class[names[t].name]=t
         elif (taxa[t].rank == 'order'):
-            order[names[t].name]="o_" + t
+            order[names[t].name]=t
         elif (taxa[t].rank == 'family'):
-            family[names[t].name]="f_" + t
+            family[names[t].name]=t
         elif (taxa[t].rank == 'genus'):
-            genus[names[t].name]="g_" + t
+            genus[names[t].name]=t
         elif (taxa[t].rank == 'species'):
-            species[names[t].name]="s_" + t
+            species[names[t].name]=t
 
 
 for r in data['rows']:
@@ -79,7 +85,8 @@ for r in data['rows']:
             #print(p + "\n" + q + "\n")
             temptax.append(q)
         # now work from the back and see if we have an element
-        rtax = None
+        rtax = {'superkingdom':'', 'phylum':'', 'class':'', 'order':'', 'family':'', 'genus':'', 'species':""}
+        #pprint(temptax)
         while (temptax):
             test = temptax.pop()
             if (test in species):
@@ -103,13 +110,25 @@ for r in data['rows']:
             elif (test in kingdom):
                 rtax = climb_tax(kingdom[test])
                 temptax = None
+            # else:
+                # sys.stderr.write(test + " not found\n")
 
-        newtax.append(",".join(rtax))
-    pprint(r['metadata']['taxonomy'])
-    pprint(newtax)
+        
+
+        rrtax=""
+        for w in want:
+            if w == 'superkingdom':
+                rrtax = 'k__' + rtax[w]
+            else:
+                rrtax += "," + w[0] + "__" + rtax[w]
+        #rrtax = rrtax.replace(',', '', 1)
+        newtax.append(rrtax)
+
+    #pprint(r['metadata']['taxonomy'])
+    #pprint(newtax)
     r['metadata']['taxonomy']=newtax
 
-with open('repout.biom', 'w') as json_out:
+with open(outfile, 'w') as json_out:
     json.dump(data, json_out)
         
 
